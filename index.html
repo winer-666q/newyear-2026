@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>2026 Fast Magic - Music Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Dancing+Script:wght@700&family=Noto+Serif+SC:wght@400&display=swap" rel="stylesheet">
+    <style>
+        * { -webkit-tap-highlight-color: transparent; }
+        body {
+            margin: 0; padding: 0;
+            background: radial-gradient(circle at 50% 100%, #151030 0%, #000000 100%);
+            overflow: hidden; user-select: none; touch-action: none;
+        }
+
+        .greetings {
+            position: fixed; top: 35%; left: 50%; transform: translate(-50%, -50%);
+            width: 90%; text-align: center; z-index: 20; pointer-events: none;
+        }
+
+        .title {
+            font-family: 'Cinzel', serif; font-size: 11vw; margin: 0;
+            background: linear-gradient(to bottom, #fff6ad, #ffcf02, #b28209);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.4));
+            animation: breathe 3s ease-in-out infinite;
+        }
+
+        .subtitle {
+            font-family: 'Dancing Script', 'Noto Serif SC', serif; 
+            font-size: 5.5vw; color: #ffffff; opacity: 0.8; margin-top: 10px;
+        }
+
+        @keyframes breathe {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+        }
+
+        #music-btn {
+            position: fixed; top: 20px; right: 20px; width: 50px; height: 50px;
+            background: rgba(255, 255, 255, 0.15); border: 1.5px solid #ffd700;
+            border-radius: 50%; cursor: pointer; z-index: 100;
+            color: #ffd700; display: flex; align-items: center; justify-content: center;
+            font-size: 24px;
+        }
+
+        canvas { display: block; z-index: 1; }
+    </style>
+</head>
+<body>
+
+    <audio id="bgm" loop preload="auto">
+        <source src="music.mp3" type="audio/mpeg">
+    </audio>
+
+    <div id="music-btn" onclick="toggleMusic()">🪄</div>
+
+    <div class="greetings">
+        <h1 class="title">HAPPY NEW YEAR</h1>
+        <div class="subtitle">让色彩点亮 2026 的每一天</div>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const audio = document.getElementById('bgm');
+        const musicBtn = document.getElementById('music-btn');
+
+        let width, height, particles = [], stars = [], wishes = [];
+        let hasInteracted = false; // 用于记录用户是否已经有过第一次点击
+
+        const words = ["Peace", "平安", "Love", "喜乐", "Hope", "万事胜意", "Warmth", "陪伴", "Magic", "如愿", "Joy", "温柔", "Health", "幸福", "快乐", "顺遂"];
+        const colors = ["#ff99cc", "#99ccff", "#99ffcc", "#cc99ff", "#ffff99", "#ffcc99"];
+
+        function init() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', init);
+        init();
+
+        // 音乐控制：支持手动开关
+        function toggleMusic() {
+            if (audio.paused) { 
+                audio.play(); 
+                musicBtn.innerText = '🎵'; 
+                hasInteracted = true;
+            } else { 
+                audio.pause(); 
+                musicBtn.innerText = '🪄'; 
+            }
+        }
+
+        const handleInteraction = (e) => {
+            // 修改点 2：只要用户第一次触碰屏幕（点烟花），就尝试自动开启音乐
+            if (!hasInteracted) {
+                audio.play().then(() => {
+                    hasInteracted = true;
+                    musicBtn.innerText = '🎵';
+                }).catch(e => console.log("等待交互触发音频..."));
+            }
+
+            const x = e.clientX || (e.touches && e.touches[0].clientX);
+            const y = e.clientY || (e.touches && e.touches[0].clientY);
+            if(e.target.id !== 'music-btn') {
+                createFirework(x, y);
+            }
+        };
+        window.addEventListener('mousedown', handleInteraction);
+        window.addEventListener('touchstart', handleInteraction);
+
+        // --- 保持你原有的所有功能逻辑不变 ---
+        class Wish {
+            constructor() {
+                this.text = words[Math.floor(Math.random() * words.length)];
+                this.x = Math.random() * width;
+                this.y = height + 50;
+                this.isChinese = /[\u4e00-\u9fa5]/.test(this.text);
+                this.fontSize = this.isChinese ? Math.random() * 8 + 22 : Math.random() * 10 + 20;
+                this.speedY = Math.random() * 1.5 + 1.2; 
+                this.opacity = 0;
+                this.maxOpacity = Math.random() * 0.6 + 0.3;
+                this.color = colors[Math.floor(Math.random() * colors.length)];
+            }
+            update() {
+                this.y -= this.speedY;
+                if(this.y > height - 100) this.opacity = Math.min(this.maxOpacity, this.opacity + 0.05);
+                if(this.y < 200) this.opacity -= 0.02;
+                return this.opacity > 0;
+            }
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.opacity);
+                ctx.font = `bold ${this.fontSize}px ${this.isChinese ? "'Noto Serif SC'" : "'Dancing Script'"}`;
+                ctx.fillStyle = this.color;
+                ctx.shadowBlur = 12;
+                ctx.shadowColor = this.color;
+                ctx.textAlign = "center";
+                ctx.fillText(this.text, this.x, this.y);
+                ctx.restore();
+            }
+        }
+
+        class Particle {
+            constructor(x, y, hue) {
+                this.x = x; this.y = y;
+                this.angle = Math.random() * Math.PI * 2;
+                this.speed = Math.random() * 6 + 2; 
+                this.friction = 0.95; this.gravity = 0.1;
+                this.hue = hue; this.alpha = 1;
+                this.decay = Math.random() * 0.02 + 0.015;
+            }
+            update() {
+                this.speed *= this.friction;
+                this.x += Math.cos(this.angle) * this.speed;
+                this.y += Math.sin(this.angle) * this.speed + this.gravity;
+                this.alpha -= this.decay;
+                return this.alpha > 0;
+            }
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.alpha;
+                ctx.beginPath();
+                ctx.fillStyle = `hsl(${this.hue}, 100%, 80%)`;
+                ctx.arc(this.x, this.y, 1.8, 0, Math.PI * 2);
+                ctx.fill(); ctx.restore();
+            }
+        }
+
+        function createFirework(tx, ty) {
+            const hue = Math.random() * 360;
+            for (let i = 0; i < 45; i++) particles.push(new Particle(tx, ty, hue));
+        }
+
+        function animate() {
+            ctx.fillStyle = 'rgba(0, 0, 5, 0.3)';
+            ctx.fillRect(0, 0, width, height);
+            
+            particles = particles.filter(p => { p.draw(); return p.update(); });
+            wishes = wishes.filter(w => { w.draw(); return w.update(); });
+
+            if (Math.random() < 0.06) createFirework(Math.random() * width, Math.random() * height * 0.6);
+            if (Math.random() < 0.05) wishes.push(new Wish());
+
+            requestAnimationFrame(animate);
+        }
+        animate();
+    </script>
+</body>
+</html>
