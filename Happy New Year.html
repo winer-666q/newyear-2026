@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026 Rainbow Wishes</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Dancing+Script:wght@700&family=Noto+Serif+SC:wght@300&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0; padding: 0;
+            background: radial-gradient(circle at 50% 100%, #101025 0%, #000000 100%);
+            overflow: hidden; user-select: none;
+        }
+
+        .greetings {
+            position: fixed; top: 40%; left: 50%; transform: translate(-50%, -50%);
+            width: 100%; text-align: center; z-index: 20; pointer-events: none;
+        }
+
+        /* 依然保持高贵的金色大标题 */
+        .title {
+            font-family: 'Cinzel', serif; font-size: 5rem; margin: 0;
+            background: linear-gradient(to bottom, #fff6ad, #ffcf02, #b28209);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.4));
+            animation: breathe 5s ease-in-out infinite;
+        }
+
+        .subtitle {
+            font-family: 'Dancing Script', 'Noto Serif SC', serif; font-size: 2.2rem;
+            color: #ffffff; opacity: 0.7; margin-top: 15px;
+        }
+
+        @keyframes breathe {
+            0%, 100% { transform: scale(1); filter: brightness(1); }
+            50% { transform: scale(1.02); filter: brightness(1.1); }
+        }
+
+        #music-btn {
+            position: fixed; top: 30px; right: 30px; width: 45px; height: 45px;
+            background: rgba(255, 255, 255, 0.05); border: 1px solid #ffd700;
+            border-radius: 50%; cursor: pointer; z-index: 100;
+            color: #ffd700; display: flex; align-items: center; justify-content: center;
+        }
+
+        canvas { display: block; z-index: 1; }
+    </style>
+</head>
+<body>
+
+   <audio id="bgm" loop preload="auto">
+        <source src="music.mp3" type="audio/mpeg">
+    </audio>
+
+    <div id="music-btn" onclick="toggleMusic()">🪄</div>
+
+    <div class="greetings">
+        <h1 class="title">HAPPY NEW YEAR</h1>
+        <div class="subtitle">让色彩点亮 2026 的每一天</div>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const audio = document.getElementById('bgm');
+        const musicBtn = document.getElementById('music-btn');
+
+        let width, height;
+        let particles = [], confetti = [], stars = [], wishes = [];
+        
+        const words = [
+            "Peace", "平安", "Love", "喜乐", "Hope", "万事胜意", 
+            "Warmth", "陪伴", "Magic", "如愿", "Joy", "温柔", "Health", "幸福"
+        ];
+
+        // 彩色文字的色池 (HSL格式，让颜色更明亮柔和)
+        const colors = [
+            "hsl(330, 100%, 75%)", // 粉红
+            "hsl(200, 100%, 75%)", // 天蓝
+            "hsl(150, 100%, 75%)", // 薄荷绿
+            "hsl(280, 100%, 75%)", // 紫罗兰
+            "hsl(45, 100%, 75%)",  // 鹅黄
+            "hsl(10, 100%, 75%)"   // 珊瑚橙
+        ];
+
+        function init() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', init);
+        init();
+
+        function toggleMusic() {
+            if (audio.paused) { audio.play(); musicBtn.innerText = '🎵'; }
+            else { audio.pause(); musicBtn.innerText = '🪄'; }
+        }
+
+        window.onclick = (e) => { 
+            if(e.target.id !== 'music-btn') {
+                audio.play(); 
+                createFirework(e.clientX, e.clientY);
+            }
+        };
+
+        class Wish {
+            constructor() {
+                this.text = words[Math.floor(Math.random() * words.length)];
+                this.x = Math.random() * width;
+                this.y = height + 50;
+                this.isChinese = /[\u4e00-\u9fa5]/.test(this.text);
+                this.fontSize = this.isChinese ? Math.random() * 10 + 20 : Math.random() * 15 + 18;
+                this.speedY = Math.random() * 0.4 + 0.2;
+                this.opacity = 0;
+                this.maxOpacity = Math.random() * 0.5 + 0.2;
+                // 每个文字随机选一个颜色
+                this.color = colors[Math.floor(Math.random() * colors.length)];
+            }
+            update() {
+                this.y -= this.speedY;
+                if(this.y > height - 100) this.opacity = Math.min(this.maxOpacity, this.opacity + 0.005);
+                if(this.y < 150) this.opacity -= 0.005;
+                return this.opacity > 0;
+            }
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.opacity);
+                ctx.font = `${this.fontSize}px ${this.isChinese ? "'Noto Serif SC'" : "'Dancing Script'"}`;
+                ctx.fillStyle = this.color;
+                // 给彩色字加一点点同色辉光，更温馨
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = this.color;
+                ctx.textAlign = "center";
+                ctx.fillText(this.text, this.x, this.y);
+                ctx.restore();
+            }
+        }
+
+        class Star {
+            constructor() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.size = Math.random() * 1.5;
+                this.blinkSpeed = Math.random() * 0.02 + 0.005;
+                this.opacity = Math.random();
+            }
+            draw() {
+                this.opacity += this.blinkSpeed;
+                let flicker = Math.abs(Math.sin(this.opacity)) * 0.4;
+                ctx.save();
+                ctx.globalAlpha = flicker;
+                ctx.fillStyle = "#ffffff";
+                ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill(); ctx.restore();
+            }
+        }
+
+        class Particle {
+            constructor(x, y, hue) {
+                this.x = x; this.y = y;
+                this.angle = Math.random() * Math.PI * 2;
+                this.speed = Math.random() * 5 + 1;
+                this.friction = 0.97; this.gravity = 0.07;
+                this.hue = hue; this.alpha = 1;
+                this.decay = Math.random() * 0.01 + 0.005;
+            }
+            update() {
+                this.speed *= this.friction;
+                this.x += Math.cos(this.angle) * this.speed;
+                this.y += Math.sin(this.angle) * this.speed + this.gravity;
+                this.alpha -= this.decay;
+                return this.alpha > 0;
+            }
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.alpha;
+                ctx.beginPath();
+                ctx.fillStyle = `hsl(${this.hue}, 100%, 80%)`;
+                ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = `hsl(${this.hue}, 100%, 50%)`;
+                ctx.fill(); ctx.restore();
+            }
+        }
+
+        class Confetti {
+            constructor() {
+                this.x = Math.random() * width;
+                this.y = -20;
+                this.size = Math.random() * 3 + 2;
+                this.speedY = Math.random() * 0.8 + 0.5;
+                this.opacity = Math.random() * 0.4 + 0.15;
+                // 让小亮片也带上淡淡的随机色
+                this.color = `hsl(${Math.random() * 360}, 100%, 80%)`;
+            }
+            update() {
+                this.y += this.speedY;
+                this.x += Math.sin(this.y * 0.02);
+                return this.y < height;
+            }
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.opacity;
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.size, this.size);
+                ctx.restore();
+            }
+        }
+
+        for(let i=0; i<100; i++) stars.push(new Star());
+
+        function createFirework(tx, ty) {
+            const hue = Math.random() * 360;
+            for (let i = 0; i < 70; i++) particles.push(new Particle(tx, ty, hue));
+        }
+
+        function animate() {
+            ctx.fillStyle = 'rgba(0, 0, 5, 0.2)';
+            ctx.fillRect(0, 0, width, height);
+
+            stars.forEach(s => s.draw());
+            
+            particles = particles.filter(p => { p.draw(); return p.update(); });
+            confetti = confetti.filter(c => { c.draw(); return c.update(); });
+            wishes = wishes.filter(w => { w.draw(); return w.update(); });
+
+            if (Math.random() < 0.04) createFirework(Math.random() * width, Math.random() * height * 0.6);
+            if (Math.random() < 0.08) confetti.push(new Confetti());
+            if (Math.random() < 0.02) wishes.push(new Wish());
+
+            requestAnimationFrame(animate);
+        }
+        animate();
+    </script>
+</body>
+</html>
